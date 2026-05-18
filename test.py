@@ -6,7 +6,7 @@ while True:
     ret, frame = cam.read()
     cv2.imshow("Camera", frame)
 
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(1) == ord('w'):
         break
 
 cam.release()
