@@ -40,14 +40,6 @@ cap = cv.VideoCapture(1)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
-cv.namedWindow("Trackbars")
-cv.resizeWindow("Trackbars", 640, 240)
-cv.createTrackbar("Hue min", "Trackbars", 0, 179, empty)
-cv.createTrackbar("Hue max", "Trackbars", 179, 179, empty)
-cv.createTrackbar("Sat min", "Trackbars", 0, 255, empty)
-cv.createTrackbar("Sat max", "Trackbars", 255, 255, empty)
-cv.createTrackbar("Val min", "Trackbars", 0, 255, empty)
-cv.createTrackbar("Val max", "Trackbars", 255, 255, empty)
 
 while True:
     success, camera = cap.read()
@@ -55,16 +47,18 @@ while True:
         break
 
     cam_HSV = cv.cvtColor(camera, cv.COLOR_BGR2HSV)
+    #find the HSV valued for your desired color using the "trackColors.py" script
+    #put the HSV values for your desired color to trackhere 
+    h_min = None
+    h_max = None
+    s_min = None
+    s_max = None
+    v_min = None
+    v_max = None
     
-    h_min = cv.getTrackbarPos("Hue min", "Trackbars")
-    h_max = cv.getTrackbarPos("Hue max", "Trackbars")
-    s_min = cv.getTrackbarPos("Sat min", "Trackbars")
-    s_max = cv.getTrackbarPos("Sat max", "Trackbars")
-    v_min = cv.getTrackbarPos("Val min", "Trackbars")
-    v_max = cv.getTrackbarPos("Val max", "Trackbars")
-    
-    lower_limit = np.array([43, 120, 33])
-    upper_limit = np.array([70, 255, 88])
+
+    lower_limit = np.array([h_min, s_min, v_min])
+    upper_limit = np.array([h_max, s_max, v_max])
     mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
     
     print(f"H: {h_min}-{h_max} | S: {s_min}-{s_max} | V: {v_min}-{v_max}")
