@@ -4,7 +4,6 @@ import numpy as np
 def empty(str):
     pass
 
-
 def imgStack(scale, imgArray):
     rows = len(imgArray)
     cols = len(imgArray[0])
@@ -36,7 +35,10 @@ def imgStack(scale, imgArray):
         
     return ver
 
-cap = cv.VideoCapture(1)
+
+camera_index = 1 #change this to your prefferd camera index
+
+cap = cv.VideoCapture(camera_index)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
@@ -63,8 +65,8 @@ while True:
     v_min = cv.getTrackbarPos("Val min", "Trackbars")
     v_max = cv.getTrackbarPos("Val max", "Trackbars")
     
-    lower_limit = np.array([43, 120, 33])
-    upper_limit = np.array([70, 255, 88])
+    lower_limit = np.array([h_min, s_min, v_min])
+    upper_limit = np.array([h_max, s_max, v_max])
     mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
     
     print(f"H: {h_min}-{h_max} | S: {s_min}-{s_max} | V: {v_min}-{v_max}")
@@ -74,7 +76,7 @@ while True:
     stacked_images = imgStack(0.7, ([camera, cam_HSV], 
                                     [mask, blankImg]))
     
-    cv.imshow("Vision Dashboard", stacked_images)
+    cv.imshow("Find your color values", stacked_images)
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
