@@ -65,7 +65,7 @@ while True:
     
     blankImg = np.zeros_like(camera)
     
-    stacked_images = imgStack(0.7, ([camera, cam_HSV], 
+    stacked_images = imgStack(0.6, ([camera, cam_HSV], 
                                     [mask, blankImg]))
     
     cv.imshow("Vision Dashboard", stacked_images)
