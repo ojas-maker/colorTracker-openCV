@@ -55,7 +55,6 @@ while True:
     s_max = None
     v_min = None
     v_max = None
-    
 
     lower_limit = np.array([h_min, s_min, v_min])
     upper_limit = np.array([h_max, s_max, v_max])
@@ -68,7 +67,7 @@ while True:
     stacked_images = imgStack(0.6, ([camera, cam_HSV], 
                                     [mask, blankImg]))
     
-    cv.imshow("Vision Dashboard", stacked_images)
+    cv.imshow("Video playbacks", stacked_images)
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
