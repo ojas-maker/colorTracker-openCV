@@ -67,6 +67,21 @@ while True:
     upper_limit = np.array([h_max, s_max, v_max])
     mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
     
+    
+    contours, hierarchy = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    
+    for cnt in contours:
+        area = cv.contourArea(cnt)
+        if area > 500: 
+            x, y, w, h = cv.boundingRect(cnt)
+            
+            cv.rectangle(camera, (x, y), (x + w, y + h), (0, 255, 0), 3)
+            
+            center_x = x + (w // 2)
+            center_y = y + (h // 2)
+            cv.circle(camera, (center_x, center_y), 5, (0, 0, 255), cv.FILLED)
+
+
     print(f"H: {h_min}-{h_max} | S: {s_min}-{s_max} | V: {v_min}-{v_max}")
     
     blankImg = np.zeros_like(camera)
