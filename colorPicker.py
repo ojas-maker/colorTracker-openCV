@@ -18,7 +18,7 @@ def get_hsv_on_click(event, x, y, flags, param):
         }
         
         # 3. Save to a single readable JSON file
-        with open("hsv_config.json", "w") as f:
+        with open("openCV/hsv_config.json", "w") as f:
             json.dump(hsv_data, f, indent=4)
         
         print("\n--- Saved to hsv_config.json! ---")

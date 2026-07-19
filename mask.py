@@ -42,8 +42,8 @@ cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
 # --- LOAD JSON DATA BEFORE THE LOOP ---
-if os.path.exists("hsv_config.json"):
-    with open("hsv_config.json", "r") as f:
+if os.path.exists("openCV/hsv_config.json"):
+    with open("openCV/hsv_config.json", "r") as f:
         data = json.load(f)
     
     # Unpack the lists back into your individual variables
