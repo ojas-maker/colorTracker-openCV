@@ -1,9 +1,10 @@
 import cv2 as cv
 import numpy as np
+import json
+import os
 
 def empty(str):
     pass
-
 
 def imgStack(scale, imgArray):
     rows = len(imgArray)
@@ -36,9 +37,24 @@ def imgStack(scale, imgArray):
         
     return ver
 
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 cap.set(cv.CAP_PROP_EXPOSURE, -4)
+
+# --- LOAD JSON DATA BEFORE THE LOOP ---
+if os.path.exists("hsv_config.json"):
+    with open("hsv_config.json", "r") as f:
+        data = json.load(f)
+    
+    # Unpack the lists back into your individual variables
+    h_min, s_min, v_min = data["lower_limit"]
+    h_max, s_max, v_max = data["upper_limit"]
+    print("Successfully loaded HSV values from JSON!")
+else:
+    print("No JSON found! Run colorPicker.py first. Using defaults.")
+    h_min, h_max = 0, 179
+    s_min, s_max = 0, 255
+    v_min, v_max = 0, 255
 
 
 while True:
@@ -47,15 +63,8 @@ while True:
         break
 
     cam_HSV = cv.cvtColor(camera, cv.COLOR_BGR2HSV)
-    #find the HSV valued for your desired color using the "trackColors.py" script
-    #put the HSV values for your desired color to trackhere 
-    h_min = None
-    h_max = None
-    s_min = None
-    s_max = None
-    v_min = None
-    v_max = None
-
+    
+    # The variables are already set by the JSON loader above
     lower_limit = np.array([h_min, s_min, v_min])
     upper_limit = np.array([h_max, s_max, v_max])
     mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
