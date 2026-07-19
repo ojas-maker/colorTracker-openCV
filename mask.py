@@ -5,8 +5,6 @@ import os
 import subprocess
 import sys
 
-# 1. Define the clickable area for a "RECALIBRATE" button
-# We will draw this on the top-left corner of your stacked dashboard
 polygon_points = np.array([
     [10, 10],   # top-left
     [150, 10],  # top-right
@@ -14,7 +12,6 @@ polygon_points = np.array([
     [10, 50]    # bottom-left
 ], dtype=np.int32).reshape((-1, 1, 2))
 
-# 2. Boolean to track if the button was clicked
 recalibrate_clicked = False
 
 def empty(str):
@@ -64,9 +61,7 @@ def imgStack(scale, imgArray):
 
 cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
-# cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
-# 3. Use the absolute path logic to prevent FileNotFoundError
 script_dir = os.path.dirname(os.path.abspath(__file__))
 json_path = os.path.join(script_dir, "hsv_config.json")
 
@@ -83,7 +78,6 @@ else:
     s_min, s_max = 0, 80
     v_min, v_max = 61, 141
 
-# 4. Attach the mouse listener to the specific window name
 cv.namedWindow("Video playbacks")
 cv.setMouseCallback("Video playbacks", handle_mouse_events)
 
