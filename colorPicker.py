@@ -5,45 +5,48 @@ import os
 import subprocess
 import sys
 
-polygon_points = np.array([
-    [54, 3],
-    [90, 3],
-    [53, 38],
-    [90, 40]   
-], dtype=np.int32)
-
-polygon_points = polygon_points.reshape((-1, 1, 2))
-
 cam_HSV = None
-# 1. Create the boolean tracker
-area_clicked = False
+calibration_done = False
+
+# 1. An empty list to store your 8 clicks
+clicked_points = [] 
 
 def handle_mouse_events(event, x, y, flags, param):
-    global cam_HSV, area_clicked # 2. Make it global so the function can modify it
+    global cam_HSV, calibration_done, clicked_points
     
     if event == cv.EVENT_LBUTTONDOWN and cam_HSV is not None:
         
-        is_inside = cv.pointPolygonTest(polygon_points, (float(x), float(y)), False)
+        # Add the clicked coordinate to our list
+        clicked_points.append((x, y))
+        print(f"Point {len(clicked_points)}/8 locked at ({x}, {y})")
         
-        if is_inside >= 0:
-            print(f"Success: Click detected INSIDE the target area at ({x}, {y})")
-            # 3. Flip the boolean to True!
-            area_clicked = True
-        else:
-            print(f"Click registered outside target at ({x}, {y})")
+        # 2. Once we hit 8 points (an octagon), do the math!
+        if len(clicked_points) == 8:
             
-        h_img, w_img = cam_HSV.shape[:2]
-        if 0 <= x < w_img and 0 <= y < h_img:
-            pixel_hsv = cam_HSV[y, x]
-            h, s, v = pixel_hsv[0], pixel_hsv[1], pixel_hsv[2]
+            # Create a completely black canvas exactly the size of the camera feed
+            h_img, w_img = cam_HSV.shape[:2]
+            roi_mask = np.zeros((h_img, w_img), dtype=np.uint8)
             
-            h_min, h_max = max(0, h - 10), min(179, h + 10)
-            s_min, s_max = max(0, s - 40), min(255, s + 40)
-            v_min, v_max = max(0, v - 40), min(255, v + 40)
+            # Draw a solid white polygon on our black canvas using your 8 points
+            pts = np.array(clicked_points, np.int32).reshape((-1, 1, 2))
+            cv.fillPoly(roi_mask, [pts], 255)
+            
+            # Ask OpenCV to calculate the average color, but ONLY where the mask is white
+            mean_color = cv.mean(cam_HSV, mask=roi_mask)
+            
+            # 3. THE FIX: Convert OpenCV's weird data into standard Python integers!
+            h = int(mean_color[0])
+            s = int(mean_color[1])
+            v = int(mean_color[2])
+            
+            # Now the math will never wrap around backwards!
+            h_min, h_max = max(0, h - 15), min(179, h + 15)
+            s_min, s_max = max(20, s - 80), min(255, s + 80)
+            v_min, v_max = max(20, v - 80), min(255, v + 80)
             
             hsv_data = {
-                "lower_limit": [int(h_min), int(s_min), int(v_min)],
-                "upper_limit": [int(h_max), int(s_max), int(v_max)]
+                "lower_limit": [h_min, s_min, v_min],
+                "upper_limit": [h_max, s_max, v_max]
             }
 
             script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -52,37 +55,58 @@ def handle_mouse_events(event, x, y, flags, param):
             with open(json_path, "w") as f:
                 json.dump(hsv_data, f, indent=4)
             
-            print("\n--- Saved to hsv_config.json! ---")
-            print(f"lower_limit = {hsv_data['lower_limit']}")
-            print(f"upper_limit = {hsv_data['upper_limit']}")
+            print("\n--- Octagon Average Saved! ---")
+            print(f"Average HSV inside shape: H:{h} S:{s} V:{v}")
             print("Ready for mask.py!")
+            
+            calibration_done = True
 
 cap = cv.VideoCapture(0)
+# Make sure lighting matches mask.py
+cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
+cap.set(cv.CAP_PROP_EXPOSURE, -4)
+
 cv.namedWindow("Color Picker") 
 cv.setMouseCallback("Color Picker", handle_mouse_events)
+
+print("Click 8 times around your object to draw a polygon!")
 
 while True:
     success, camera = cap.read()
     if not success: 
         break
     
-    cv.putText(camera, ".", (40, 40), cv.FONT_HERSHEY_SIMPLEX, 8, (0, 255, 0), 2)
+    # The Clean Clone (So your UI lines don't get mixed into the math)
+    clean_frame = camera.copy()
+    blurred = cv.GaussianBlur(clean_frame, (5, 5), 0)
+    cam_HSV = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
     
-    cam_HSV = cv.cvtColor(camera, cv.COLOR_BGR2HSV)
+    # 4. THE UI: Draw lines connecting the dots as you click!
+    for i, point in enumerate(clicked_points):
+        cv.circle(camera, point, 4, (0, 0, 255), -1) # Red dots for clicks
+        if i > 0:
+            cv.line(camera, clicked_points[i-1], point, (0, 255, 0), 2) # Green connecting lines
+            
+    # Draw the final closing line if all 8 points are placed
+    if len(clicked_points) == 8:
+        cv.line(camera, clicked_points[7], clicked_points[0], (0, 255, 0), 2)
+    
+    # Helpful text counter on screen
+    cv.putText(camera, f"Points: {len(clicked_points)}/8", (20, 40), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+    
     cv.imshow("Color Picker", camera)
     
-    # 4. Check the boolean every single frame
-    if area_clicked:
+    if calibration_done:
+        # Pause for exactly 1 second so you can visually see your finished polygon
+        cv.waitKey(1000) 
         print("Transitioning to mask.py...")
         break
         
     if cv.waitKey(1) & 0xFF == ord('q'): 
         break
 
-# 5. CRITICAL FIX: Release the camera BEFORE launching the new script!
 cap.release()
 cv.destroyAllWindows()
 
-# 6. Launch mask.py ONLY if the target was actually clicked (not if you just pressed 'q' to quit)
-if area_clicked:
+if calibration_done:
     subprocess.run([sys.executable, "mask.py"])

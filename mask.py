@@ -64,7 +64,7 @@ def imgStack(scale, imgArray):
 
 cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv.CAP_PROP_EXPOSURE, -4)
+# cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
 # 3. Use the absolute path logic to prevent FileNotFoundError
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -79,9 +79,9 @@ if os.path.exists(json_path):
     print("Successfully loaded HSV values from JSON!")
 else:
     print("No JSON found! Run colorPicker.py first. Using defaults.")
-    h_min, h_max = 0, 179
-    s_min, s_max = 0, 255
-    v_min, v_max = 0, 255
+    h_min, h_max = 35, 55
+    s_min, s_max = 0, 80
+    v_min, v_max = 61, 141
 
 # 4. Attach the mouse listener to the specific window name
 cv.namedWindow("Video playbacks")
@@ -92,7 +92,8 @@ while True:
     if not success:
         break
 
-    cam_HSV = cv.cvtColor(camera, cv.COLOR_BGR2HSV)
+    blurred = cv.GaussianBlur(camera, (5, 5), 0)
+    cam_HSV = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
     
     lower_limit = np.array([h_min, s_min, v_min])
     upper_limit = np.array([h_max, s_max, v_max])
@@ -112,23 +113,19 @@ while True:
     blankImg = np.zeros_like(camera)
     stacked_images = imgStack(0.6, ([camera, mask]))
     
-    # 5. Draw the graphical button ON TOP of the stacked dashboard
     cv.rectangle(stacked_images, (10, 10), (150, 50), (0, 0, 255), cv.FILLED)
     cv.putText(stacked_images, "RECALIBRATE", (18, 35), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     
     cv.imshow("Video playbacks", stacked_images)
 
-    # 6. Break the loop if the button was clicked
     if recalibrate_clicked:
         break
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
-# 7. Release hardware safely before transitioning
 cap.release()
 cv.destroyAllWindows()
 
-# 8. Launch colorPicker.py automatically
 if recalibrate_clicked:
     subprocess.run([sys.executable, "colorPicker.py"])
