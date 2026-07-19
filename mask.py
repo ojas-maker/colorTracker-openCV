@@ -2,9 +2,34 @@ import cv2 as cv
 import numpy as np
 import json
 import os
+import subprocess
+import sys
+
+# 1. Define the clickable area for a "RECALIBRATE" button
+# We will draw this on the top-left corner of your stacked dashboard
+polygon_points = np.array([
+    [10, 10],   # top-left
+    [150, 10],  # top-right
+    [150, 50],  # bottom-right
+    [10, 50]    # bottom-left
+], dtype=np.int32).reshape((-1, 1, 2))
+
+# 2. Boolean to track if the button was clicked
+recalibrate_clicked = False
 
 def empty(str):
     pass
+
+def handle_mouse_events(event, x, y, flags, param):
+    global recalibrate_clicked
+    
+    if event == cv.EVENT_LBUTTONDOWN:
+        # Check if the click happened inside our defined polygon
+        is_inside = cv.pointPolygonTest(polygon_points, (float(x), float(y)), False)
+        
+        if is_inside >= 0:
+            print("Recalibrate button clicked! Transitioning...")
+            recalibrate_clicked = True
 
 def imgStack(scale, imgArray):
     rows = len(imgArray)
@@ -41,8 +66,12 @@ cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
-if os.path.exists("openCV/hsv_config.json"):
-    with open("openCV/hsv_config.json", "r") as f:
+# 3. Use the absolute path logic to prevent FileNotFoundError
+script_dir = os.path.dirname(os.path.abspath(__file__))
+json_path = os.path.join(script_dir, "hsv_config.json")
+
+if os.path.exists(json_path):
+    with open(json_path, "r") as f:
         data = json.load(f)
     
     h_min, s_min, v_min = data["lower_limit"]
@@ -54,6 +83,9 @@ else:
     s_min, s_max = 0, 255
     v_min, v_max = 0, 255
 
+# 4. Attach the mouse listener to the specific window name
+cv.namedWindow("Video playbacks")
+cv.setMouseCallback("Video playbacks", handle_mouse_events)
 
 while True:
     success, camera = cap.read()
@@ -62,11 +94,9 @@ while True:
 
     cam_HSV = cv.cvtColor(camera, cv.COLOR_BGR2HSV)
     
-
     lower_limit = np.array([h_min, s_min, v_min])
     upper_limit = np.array([h_max, s_max, v_max])
     mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
-    
     
     contours, hierarchy = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     
@@ -74,25 +104,31 @@ while True:
         area = cv.contourArea(cnt)
         if area > 500: 
             x, y, w, h = cv.boundingRect(cnt)
-            
             cv.rectangle(camera, (x, y), (x + w, y + h), (0, 255, 0), 3)
-            
             center_x = x + (w // 2)
             center_y = y + (h // 2)
             cv.circle(camera, (center_x, center_y), 5, (0, 0, 255), cv.FILLED)
 
-
-    print(f"H: {h_min}-{h_max} | S: {s_min}-{s_max} | V: {v_min}-{v_max}")
-    
     blankImg = np.zeros_like(camera)
+    stacked_images = imgStack(0.6, ([camera, mask]))
     
-    stacked_images = imgStack(0.6, ([camera, cam_HSV], 
-                                    [mask, blankImg]))
+    # 5. Draw the graphical button ON TOP of the stacked dashboard
+    cv.rectangle(stacked_images, (10, 10), (150, 50), (0, 0, 255), cv.FILLED)
+    cv.putText(stacked_images, "RECALIBRATE", (18, 35), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     
     cv.imshow("Video playbacks", stacked_images)
+
+    # 6. Break the loop if the button was clicked
+    if recalibrate_clicked:
+        break
 
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
+# 7. Release hardware safely before transitioning
 cap.release()
 cv.destroyAllWindows()
+
+# 8. Launch colorPicker.py automatically
+if recalibrate_clicked:
+    subprocess.run([sys.executable, "colorPicker.py"])
