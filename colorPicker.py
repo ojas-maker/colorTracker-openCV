@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-import json # 1. Import JSON
+import json
 
 def get_hsv_on_click(event, x, y, flags, param):
     if event == cv.EVENT_LBUTTONDOWN:
@@ -11,13 +11,11 @@ def get_hsv_on_click(event, x, y, flags, param):
         s_min, s_max = max(0, s - 40), min(255, s + 40)
         v_min, v_max = max(0, v - 40), min(255, v + 40)
         
-        # 2. Convert the NumPy integers to standard Python integers so JSON can read them
         hsv_data = {
             "lower_limit": [int(h_min), int(s_min), int(v_min)],
             "upper_limit": [int(h_max), int(s_max), int(v_max)]
         }
         
-        # 3. Save to a single readable JSON file
         with open("openCV/hsv_config.json", "w") as f:
             json.dump(hsv_data, f, indent=4)
         

@@ -41,12 +41,10 @@ cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
-# --- LOAD JSON DATA BEFORE THE LOOP ---
 if os.path.exists("openCV/hsv_config.json"):
     with open("openCV/hsv_config.json", "r") as f:
         data = json.load(f)
     
-    # Unpack the lists back into your individual variables
     h_min, s_min, v_min = data["lower_limit"]
     h_max, s_max, v_max = data["upper_limit"]
     print("Successfully loaded HSV values from JSON!")
@@ -64,7 +62,7 @@ while True:
 
     cam_HSV = cv.cvtColor(camera, cv.COLOR_BGR2HSV)
     
-    # The variables are already set by the JSON loader above
+
     lower_limit = np.array([h_min, s_min, v_min])
     upper_limit = np.array([h_max, s_max, v_max])
     mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
