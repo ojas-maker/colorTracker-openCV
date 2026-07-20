@@ -2,25 +2,19 @@ import cv2 as cv
 import numpy as np
 import json
 import os
-import subprocess
-import sys
 
 cam_HSV = None
 calibration_done = False
-
-# 1. An empty list to store your 8 clicks
 clicked_points = [] 
 
 def handle_mouse_events(event, x, y, flags, param):
     global cam_HSV, calibration_done, clicked_points
     
     if event == cv.EVENT_LBUTTONDOWN and cam_HSV is not None:
-        
         clicked_points.append((x, y))
         print(f"Point {len(clicked_points)}/8 locked at ({x}, {y})")
         
         if len(clicked_points) == 8:
-
             h_img, w_img = cam_HSV.shape[:2]
             roi_mask = np.zeros((h_img, w_img), dtype=np.uint8)
             
@@ -54,46 +48,49 @@ def handle_mouse_events(event, x, y, flags, param):
             
             calibration_done = True
 
-cap = cv.VideoCapture(0)
-cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv.CAP_PROP_EXPOSURE, -4)
-
-cv.namedWindow("Color Picker") 
-cv.setMouseCallback("Color Picker", handle_mouse_events)
-
-print("Click 8 times around your object to draw a polygon!")
-
-while True:
-    success, camera = cap.read()
-    if not success: 
-        break
+def run_picker():
+    global cam_HSV, calibration_done, clicked_points
     
-    clean_frame = camera.copy()
-    blurred = cv.GaussianBlur(clean_frame, (5, 5), 0)
-    cam_HSV = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
+    calibration_done = False
+    clicked_points = []
+    
+    cap = cv.VideoCapture(0)
+    cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
+    cap.set(cv.CAP_PROP_EXPOSURE, -4)
 
-    for i, point in enumerate(clicked_points):
-        cv.circle(camera, point, 4, (0, 0, 255), -1)
-        if i > 0:
-            cv.line(camera, clicked_points[i-1], point, (0, 255, 0), 2)
-            
-    if len(clicked_points) == 8:
-        cv.line(camera, clicked_points[7], clicked_points[0], (0, 255, 0), 2)
-    
-    cv.putText(camera, f"Points: {len(clicked_points)}/8", (20, 40), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-    
-    cv.imshow("Color Picker", camera)
-    
-    if calibration_done:
-        cv.waitKey(1000) 
-        print("Transitioning to mask.py...")
-        break
+    cv.namedWindow("Color Picker") 
+    cv.setMouseCallback("Color Picker", handle_mouse_events)
+    print("Click 8 times around your object to draw a polygon!")
+
+    while True:
+        success, camera = cap.read()
+        if not success: 
+            break
         
-    if cv.waitKey(1) & 0xFF == ord('q'): 
-        break
+        clean_frame = camera.copy()
+        blurred = cv.GaussianBlur(clean_frame, (5, 5), 0)
+        cam_HSV = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
 
-cap.release()
-cv.destroyAllWindows()
+        for i, point in enumerate(clicked_points):
+            cv.circle(camera, point, 4, (0, 0, 255), -1)
+            if i > 0:
+                cv.line(camera, clicked_points[i-1], point, (0, 255, 0), 2)
+                
+        if len(clicked_points) == 8:
+            cv.line(camera, clicked_points[7], clicked_points[0], (0, 255, 0), 2)
+        
+        cv.putText(camera, f"Points: {len(clicked_points)}/8", (20, 40), cv.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        
+        cv.imshow("Color Picker", camera)
+        
+        if calibration_done:
+            cv.waitKey(1000) 
+            print("Transitioning to Engine...")
+            break
+            
+        if cv.waitKey(1) & 0xFF == ord('q'): 
+            break
 
-if calibration_done:
-    subprocess.run([sys.executable, "mask.py"])
+    cap.release()
+    cv.destroyAllWindows()
+    return True

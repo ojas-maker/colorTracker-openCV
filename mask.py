@@ -2,8 +2,7 @@ import cv2 as cv
 import numpy as np
 import json
 import os
-import subprocess
-import sys
+
 
 polygon_points = np.array([
     [10, 10],   # top-left
@@ -17,6 +16,9 @@ recalibrate_clicked = False
 def empty(str):
     pass
 
+# ==========================================
+# 2. MOUSE CALLBACK
+# ==========================================
 def handle_mouse_events(event, x, y, flags, param):
     global recalibrate_clicked
     
@@ -27,6 +29,7 @@ def handle_mouse_events(event, x, y, flags, param):
         if is_inside >= 0:
             print("Recalibrate button clicked! Transitioning...")
             recalibrate_clicked = True
+
 
 def imgStack(scale, imgArray):
     rows = len(imgArray)
@@ -59,67 +62,71 @@ def imgStack(scale, imgArray):
         
     return ver
 
-cap = cv.VideoCapture(0)
-cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-json_path = os.path.join(script_dir, "hsv_config.json")
-
-if os.path.exists(json_path):
-    with open(json_path, "r") as f:
-        data = json.load(f)
+def run_mask():
+    global recalibrate_clicked
+    recalibrate_clicked = False
     
-    h_min, s_min, v_min = data["lower_limit"]
-    h_max, s_max, v_max = data["upper_limit"]
-    print("Successfully loaded HSV values from JSON!")
-else:
-    print("No JSON found! Run colorPicker.py first. Using defaults.")
-    h_min, h_max = 35, 55
-    s_min, s_max = 0, 80
-    v_min, v_max = 61, 141
+    cap = cv.VideoCapture(0)
+    cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 
-cv.namedWindow("Video playbacks")
-cv.setMouseCallback("Video playbacks", handle_mouse_events)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(script_dir, "hsv_config.json")
 
-while True:
-    success, camera = cap.read()
-    if not success:
-        break
+    if os.path.exists(json_path):
+        with open(json_path, "r") as f:
+            data = json.load(f)
+        
+        h_min, s_min, v_min = data["lower_limit"]
+        h_max, s_max, v_max = data["upper_limit"]
+        print("Successfully loaded HSV values from JSON!")
+    else:
+        print("No JSON found! Run colorPicker.py first. Using defaults.")
+        h_min, h_max = 35, 55
+        s_min, s_max = 0, 80
+        v_min, v_max = 61, 141
 
-    blurred = cv.GaussianBlur(camera, (5, 5), 0)
-    cam_HSV = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
-    
-    lower_limit = np.array([h_min, s_min, v_min])
-    upper_limit = np.array([h_max, s_max, v_max])
-    mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
-    
-    contours, hierarchy = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    
-    for cnt in contours:
-        area = cv.contourArea(cnt)
-        if area > 500: 
-            x, y, w, h = cv.boundingRect(cnt)
-            cv.rectangle(camera, (x, y), (x + w, y + h), (0, 255, 0), 3)
-            center_x = x + (w // 2)
-            center_y = y + (h // 2)
-            cv.circle(camera, (center_x, center_y), 5, (0, 0, 255), cv.FILLED)
+    cv.namedWindow("Video playbacks")
+    cv.setMouseCallback("Video playbacks", handle_mouse_events)
 
-    blankImg = np.zeros_like(camera)
-    stacked_images = imgStack(0.6, ([camera, mask]))
-    
-    cv.rectangle(stacked_images, (10, 10), (150, 50), (0, 0, 255), cv.FILLED)
-    cv.putText(stacked_images, "RECALIBRATE", (18, 35), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-    
-    cv.imshow("Video playbacks", stacked_images)
+    while True:
+        success, camera = cap.read()
+        if not success:
+            break
 
-    if recalibrate_clicked:
-        break
+        blurred = cv.GaussianBlur(camera, (5, 5), 0)
+        cam_HSV = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
+        
+        lower_limit = np.array([h_min, s_min, v_min])
+        upper_limit = np.array([h_max, s_max, v_max])
+        mask  = cv.inRange(cam_HSV, lower_limit, upper_limit)
+        
+        contours, hierarchy = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        
+        for cnt in contours:
+            area = cv.contourArea(cnt)
+            if area > 500: 
+                x, y, w, h = cv.boundingRect(cnt)
+                cv.rectangle(camera, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                center_x = x + (w // 2)
+                center_y = y + (h // 2)
+                cv.circle(camera, (center_x, center_y), 5, (0, 0, 255), cv.FILLED)
 
-    if cv.waitKey(1) & 0xFF == ord('q'):
-        break
+        blankImg = np.zeros_like(camera)
+        stacked_images = imgStack(0.6, ([camera, mask]))
+        
+        cv.rectangle(stacked_images, (10, 10), (150, 50), (0, 0, 255), cv.FILLED)
+        cv.putText(stacked_images, "RECALIBRATE", (18, 35), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        cv.imshow("Video playbacks", stacked_images)
 
-cap.release()
-cv.destroyAllWindows()
+        if recalibrate_clicked:
+            break
 
-if recalibrate_clicked:
-    subprocess.run([sys.executable, "colorPicker.py"])
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+
+    return recalibrate_clicked
