@@ -69,6 +69,8 @@ def run_mask():
     
     cap = cv.VideoCapture(0)
     cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
+    cap.set(cv.CAP_PROP_EXPOSURE, -4.85)
+    # cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(script_dir, "hsv_config.json")
